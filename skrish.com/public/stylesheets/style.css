@@ -1,9 +1,9 @@
 a{text-decoration:none;}
 html{background:url('/images/background.png') repeat scroll 5% 5% #000;z-index:1;}
-body{background:url('/images/midground.png') repeat scroll 20% 20% #000;}
+body{background:url('/images/midground.png') repeat scroll 20% 20% transparent;}
 body .header{position:fixed;}
 body .header ul.top-menu{}
-body .header ul.top-menu li{-webkit-transform:rotate(-45deg);-moz-transform:(-45deg);background-color:#A50E0E;width:30px;height:50px;border:solid 1px #EFEFEF;}
+body .header ul.top-menu li{}
 body .header ul.top-menu li a{}
 
-body .content{background:url('/images/foreground.png') repeat scroll 90% 110% #000;z-index:3;width:100%;min-height:900px;}
+body .content{background:url('/images/foreground.png') repeat scroll 90% 110% transparent;z-index:3;width:100%;min-height:900px;}
