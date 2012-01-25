@@ -7,3 +7,5 @@ body .header ul.top-menu li{}
 body .header ul.top-menu li a{}
 
 body .content{background:url('/images/foreground.png') repeat scroll 90% 110% transparent;z-index:3;width:100%;min-height:900px;}
+body .content ul.fibo{}
+body .content ul.fibo li{}
