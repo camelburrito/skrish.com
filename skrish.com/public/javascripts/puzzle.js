@@ -14,7 +14,26 @@ FB_PUZZLE.UTIL={
 			min=0;
 		}
 		return Math.floor(((max - min) * Math.random()) + min);
-	}
+	},
+	addListener:((function(){
+		if(window.addEventListener){
+			return (function(element,action,callback){
+				element.addEventListener(action,callback,false);
+			});
+		}else if(window.attachEvent){
+			return (function(element,action,callback){
+				element.attachEvent("on"+action,callback);
+			});
+		}else{
+			return (function(element,action,callback){
+				if(!element["on"+action]){
+					element["on"+action]=callback;
+				}else{
+					element["on"+action]= function(){element["on"+action]();callback();};
+				}
+			});
+		}
+	})())
 };
 
 
@@ -24,8 +43,8 @@ FB_PUZZLE.Board = function(config){
 	this.boardDimension= config.image_dimension;/*width and height of the board*/
 	this.image = config.image;
 	this._tiles=[];
-	this._actual_tile_positions=[];
-	this._current_tile_positions=[];
+	//this._actual_tile_positions=[];/*index-> Board Positions ;value-> correct tile no*/
+	//this._current_tile_positions=[];/*index-> Board Positions ;value-> current tile no*/
 	this._DOMElement= this.generateDOMElement();
 	(function(board){
 		board.init();
@@ -34,26 +53,38 @@ FB_PUZZLE.Board = function(config){
 FB_PUZZLE.Board.prototype.generateDOMElement=function(){
 	var ul = document.createElement("ul");
 	ul.className="puzzle-board";
+	ul.style.position="relative";
 	ul.style.width=this.boardDimension+"px";
-	//ul.style.height=this.boardDimension+"px";
+	ul.style.height=this.boardDimension+"px";
 	/*Add Event Listeners Here*/
 	return ul;
 };
 
 FB_PUZZLE.Board.prototype.renderPuzzle=function(){
-	/*Assumes Init has been Called*/
-	var i,total_no_of_tiles;
-	
-	/*Always Render by current_tile_positions- so sort the tile array*/
-	this._tiles.sort(function(tile1,tile2){
-		return tile1.current_position-tile2.current_position;
-	});
+	/*Assumes Init has been Called atleast once before*/
+	var i,total_no_of_tiles,UTIL=FB_PUZZLE.UTIL,action_tile;
 	total_no_of_tiles= this.dimension*this.dimension;
+	for(i=0;i<total_no_of_tiles;i++){
+		/*Add Event Listeners Here*/
+		(function(board,tile){
+			UTIL.addListener(tile._DOMElement,"click",function(){
+				board.moveTile(tile);
+			});
+		})(this,this._tiles[i]);
+		this._DOMElement.appendChild(this._tiles[i]._DOMElement);
+	}
+	document.getElementsByTagName("body")[0].appendChild(this._DOMElement);
+};
+
+FB_PUZZLE.Board.prototype.redrawPuzzle=function(){
+	var i,total_no_of_tiles;
+	this._DOMElement.innerHTML="";
 	for(i=0;i<total_no_of_tiles;i++){
 		this._DOMElement.appendChild(this._tiles[i]._DOMElement);
 	}
 	document.getElementsByTagName("body")[0].appendChild(this._DOMElement);
 };
+
 
 FB_PUZZLE.Board.prototype.decodeTileCoordinates=function(position){
 	var row,col;
@@ -66,29 +97,234 @@ FB_PUZZLE.Board.prototype.decodeTileCoordinates=function(position){
 	}
 };
 
+
+FB_PUZZLE.Board.prototype.moveTile=function(tile){
+	var tmp_position=tile.current_position;
+	if(tile.isBlank){
+		return;
+	}
+	var move_direction= this.getPossibleTileMove(tile);
+	console.log("This Tile Can move to it's "+move_direction);
+	//alert(move_direction);
+	if(move_direction){
+		if(move_direction=="left"){
+			this.swapTiles(tile.current_position,tile.current_position-1);
+		}else if(move_direction=="right"){
+			this.swapTiles(tile.current_position,tile.current_position+1);
+		}else if(move_direction=="top"){
+			this.swapTiles(tile.current_position,tile.current_position-this.dimension);
+		}else if(move_direction=="bottom"){
+			this.swapTiles(tile.current_position,tile.current_position+this.dimension);
+		}else if(move_direction=="rowleft"){
+			while(this._tiles[tmp_position].isBlank!=true){
+				if(this._tiles[tile.current_position-1].isBlank){
+					this.moveTile(tile);
+				}else{
+					this.moveTile(this._tiles[tile.current_position-1]);
+				}
+			}			
+		}else if(move_direction=="rowright"){
+			while(this._tiles[tmp_position].isBlank!=true){
+				if(this._tiles[tile.current_position+1].isBlank){
+					this.moveTile(tile);
+				}else{
+					this.moveTile(this._tiles[tile.current_position+1]);
+				}
+			}			
+		}else if(move_direction=="coltop"){
+			while(this._tiles[tmp_position].isBlank!=true){
+				if(this._tiles[tile.current_position-this.dimension].isBlank){
+					this.moveTile(tile);
+				}else{
+					this.moveTile(this._tiles[tile.current_position-this.dimension]);
+				}
+			}			
+		}else if(move_direction=="colbottom"){
+			while(this._tiles[tmp_position].isBlank!=true){
+				if(this._tiles[tile.current_position+this.dimension].isBlank){
+					this.moveTile(tile);
+				}else{
+					this.moveTile(this._tiles[tile.current_position+this.dimension]);
+				}
+			}			
+		}
+	}
+};
+
+
+FB_PUZZLE.Board.prototype.swapTiles=function(tile1_pos,tile2_pos){
+	var tmp,i;
+	/*Update Current Positions*/
+	this._tiles[tile1_pos].current_position=tile2_pos;
+	this._tiles[tile2_pos].current_position=tile1_pos;
+	
+	// tmp=this._current_tile_positions[tile1_pos];
+	// this._current_tile_positions[tile1_pos]=this._current_tile_positions[tile2_pos];
+	// this._current_tile_positions[tile2_pos]=tmp;
+	
+	/*swap current_coordinates*/
+	tmp=this._tiles[tile1_pos].current_coordinates;
+	this._tiles[tile1_pos].current_coordinates=this._tiles[tile2_pos].current_coordinates;
+	this._tiles[tile2_pos].current_coordinates=tmp;
+	
+	/*Swap Tile Objects*/
+	tmp=this._tiles[tile1_pos];
+	this._tiles[tile1_pos]=this._tiles[tile2_pos];
+	this._tiles[tile2_pos]=tmp;
+	
+	/*Physically move tiles by updating background positions*/
+	tmp=this._tiles[tile1_pos]._DOMElement.style.left;
+	this._tiles[tile1_pos]._DOMElement.style.left=this._tiles[tile2_pos]._DOMElement.style.left;
+	this._tiles[tile2_pos]._DOMElement.style.left=tmp;
+	
+	tmp=this._tiles[tile1_pos]._DOMElement.style.top;
+	this._tiles[tile1_pos]._DOMElement.style.top=this._tiles[tile2_pos]._DOMElement.style.top;
+	this._tiles[tile2_pos]._DOMElement.style.top=tmp;
+
+	if(this.isBoardSolved()){
+		alert("game ends");
+	}
+	
+	// console.log("Current Positions :"+this._current_tile_positions.toString());
+	// console.log("Actual Positions :"+this._actual_tile_positions.toString());
+};
+
+FB_PUZZLE.Board.prototype.isBoardSolved=function(){
+	var i=0;
+	for(;i<this._tiles.length;i++){
+		if(this._tiles[i].current_position!=this._tiles[i].actual_position){
+			return false;
+		}
+	}
+	return true;
+};
+
+
+FB_PUZZLE.Board.prototype.moveTileRowLeft=function(tile){
+	
+};
+
+FB_PUZZLE.Board.prototype.getPossibleTileMove=function(tile,travesal_direction){
+	var current_position= tile.current_position,temp,coordinates,left=true,top=true,bottom=true,right=true,tiles=this._tiles;
+	if(!travesal_direction){
+		travesal_direction="";
+	}
+	
+	coordinates= this.decodeTileCoordinates(current_position);
+	console.log("("+coordinates.row+","+coordinates.col+")-->");
+	if(coordinates.col==0){
+		left=false;
+	}
+	
+	if(coordinates.col==this.dimension-1){
+		right=false;
+	}
+	
+	if(coordinates.row==0){
+		top=false;
+	}
+	
+	if(coordinates.row==this.dimension-1){
+		bottom=false;
+	}
+	if(travesal_direction=="left"){
+		if(!left){
+			return false;
+		}else{
+			right=false;top=false;bottom=false;
+		}
+	}
+	
+	if(travesal_direction=="right"){
+		if(!right){
+			return false;
+		}else{
+			left=false;top=false;bottom=false;
+		}
+	}
+	
+	if(travesal_direction=="top"){
+		if(!top){
+			return false;
+		}else{
+			right=false;left=false;bottom=false;
+		}
+	}
+	
+	if(travesal_direction=="bottom"){
+		if(!bottom){
+			return false;
+		}else{
+			right=false;top=false;left=false;
+		}
+	}
+	
+	if(left && tiles[current_position-1] && tiles[current_position-1].isBlank){
+		return "left";
+	}
+	if(right && tiles[current_position+1] && tiles[current_position+1].isBlank){
+		return "right";
+	}
+	if(top && tiles[current_position-this.dimension] && tiles[current_position-this.dimension].isBlank){
+		return "top";
+	}
+	if(bottom && tiles[current_position+this.dimension] && tiles[current_position+this.dimension].isBlank){
+		return "bottom";
+	}
+	if(left){
+		temp_move=this.getPossibleTileMove(tiles[current_position-1],"left");
+		if(temp_move=="left" || temp_move=="rowleft"){
+			return "rowleft";
+		}
+	}
+	if(right){
+		temp_move=this.getPossibleTileMove(tiles[current_position+1],"right");
+		if(temp_move=="right" || temp_move=="rowright"){
+			return "rowright";
+		}
+	}
+	if(top){
+		temp_move=this.getPossibleTileMove(tiles[current_position-this.dimension],"top");
+		if(temp_move=="top" || temp_move=="coltop"){
+			return "coltop";
+		}
+	}
+	if(bottom){
+		temp_move=this.getPossibleTileMove(tiles[current_position+this.dimension],"bottom");
+		if(temp_move=="bottom" || temp_move=="colbottom"){
+			return "colbottom";
+		}
+	}
+	return false;
+};
+
+
 FB_PUZZLE.Board.prototype.init = function(){
-	var i=0,total_no_of_tiles,tile_dimension;
-	if(this.dimension>2){
+	var i=0,total_no_of_tiles,tile_dimension,_actual_tile_positions=[],_current_tile_positions=[];
+	if(this.dimension>=2){
 		tile_dimension= Math.floor(this.boardDimension/this.dimension)-4;
 		total_no_of_tiles=this.dimension*this.dimension;
 		/*Init actual Positions*/
-		while(this._actual_tile_positions.length<total_no_of_tiles){
-			this._actual_tile_positions[i]=i;
+		while(_actual_tile_positions.length<total_no_of_tiles){
+			_actual_tile_positions[i]=i;
 			i++;
 		}
 		/*Randomize Atual Positions -- Actuals Array should never be modified after this*/
-		this.randomizePositions(this._actual_tile_positions);
+		this.randomizePositions(_actual_tile_positions);
 		
 		/*Generate Randomize Positions*/
-		this._current_tile_positions=this._actual_tile_positions.slice(0);
-		this.randomizePositions(this._current_tile_positions);
+		_current_tile_positions=_actual_tile_positions.slice(0);
+		this.randomizePositions(_current_tile_positions);
 		for(i=0;i<total_no_of_tiles;i++){
-			this._tiles[i]= new FB_PUZZLE.Tile({"dimension":tile_dimension,"current_position":this._current_tile_positions[i],"actual_position":this._actual_tile_positions[i],"tile_coordinates":this.decodeTileCoordinates(this._actual_tile_positions[i]),"image":this.image});
+			this._tiles[i]= new FB_PUZZLE.Tile({"dimension":tile_dimension,"current_position":_current_tile_positions[i],"actual_position":_actual_tile_positions[i],"actual_tile_coordinates":this.decodeTileCoordinates(_actual_tile_positions[i]),"current_tile_coordinates":this.decodeTileCoordinates(_current_tile_positions[i]),"image":this.image});
 		}
-		
+		/*Always Render by current_tile_positions- so sort the tile array*/
+		this._tiles.sort(function(tile1,tile2){
+			return tile1.current_position-tile2.current_position;
+		});
 		this.renderPuzzle();
 	}else{
-		throw FB_PUZZLE_INVALID_DIMENSION_ERROR;
+		throw "FB_PUZZLE_INVALID_DIMENSION_ERROR";
 	}
 };
 
@@ -103,7 +339,8 @@ FB_PUZZLE.Board.prototype.randomizePositions=function(tile_positions_array){
 FB_PUZZLE.Tile= function(config){
 	this.current_position= (typeof(config.current_position)=="number")?config.current_position:-1;
 	this.actual_position=(typeof(config.actual_position)=="number")?config.actual_position:-1;
-	this.coordinates= (config.tile_coordinates)?config.tile_coordinates:{"row":0,"col":0};
+	this.actual_coordinates= (config.actual_tile_coordinates)?config.actual_tile_coordinates:{"row":0,"col":0};
+	this.current_coordinates= (config.current_tile_coordinates)?config.current_tile_coordinates:{"row":0,"col":0};
 	this.dimension= config.dimension; /*actual width and height*/
 	this.image=config.image;
 	this.isBlank=(typeof(config.actual_position)=="number" && config.actual_position==0)?true:false;
@@ -114,15 +351,18 @@ FB_PUZZLE.Tile.prototype.generateDOMElement = function(){
 	var li,pos;
 	li=document.createElement("li");
 	li.className="tile";
+	li.style.position="absolute";
+	li.style.left=(this.current_coordinates["col"]*(this.dimension+4))+"px";
+	li.style.top=(this.current_coordinates["row"]*(this.dimension+4))+"px";
 	li.style.height=this.dimension+"px";
 	li.style.width=this.dimension+"px";
+	li.innerHTML="Current-("+this.current_coordinates["row"]+","+this.current_coordinates["col"]+")--- Actual-("+this.actual_coordinates["row"]+","+this.actual_coordinates["col"]+")";
 	if(!this.isBlank){
 		li.style.backgroundImage="url("+this.image+")";
 	}else{
 		li.className+=" blank";
 	}
-	li.style.backgroundPosition=(-1*this.coordinates["row"]*this.dimension)+"px "+ (-1*this.coordinates["col"]*this.dimension)+"px";
-	/*Add Event Listeners Here*/
+	li.style.backgroundPosition=(-1*this.actual_coordinates["col"]*this.dimension)+"px "+ (-1*this.actual_coordinates["row"]*this.dimension)+"px";
 	return li;
 };
 
