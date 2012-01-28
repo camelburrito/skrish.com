@@ -356,7 +356,7 @@ FB_PUZZLE.Tile.prototype.generateDOMElement = function(){
 	li.style.top=(this.current_coordinates["row"]*(this.dimension+4))+"px";
 	li.style.height=this.dimension+"px";
 	li.style.width=this.dimension+"px";
-	li.innerHTML="Current-("+this.current_coordinates["row"]+","+this.current_coordinates["col"]+")--- Actual-("+this.actual_coordinates["row"]+","+this.actual_coordinates["col"]+")";
+	//li.innerHTML="Current-("+this.current_coordinates["row"]+","+this.current_coordinates["col"]+")--- Actual-("+this.actual_coordinates["row"]+","+this.actual_coordinates["col"]+")";
 	if(!this.isBlank){
 		li.style.backgroundImage="url("+this.image+")";
 	}else{
