@@ -1,5 +1,14 @@
-body{}
-body h1{text-align:center;font-weight:bold;text-transform:capitalize;font-size:175%;}
-body ul.puzzle-board{background-color:#000;overflow:hidden;opacity:0.8;margin:0 auto;}
-body ul.puzzle-board li.tile{background:url("../images/globe.jpg") no-repeat scroll 0 0 #EFEFEF;border:solid 2px #FFF;float:left;}
-body ul.puzzle-board li.tile.blank{background-image:none;}
+*{-webkit-text-size-adjust:none;}
+body{width:540px;margin:0 auto;}
+body h1{text-align:center;font-weight:bold;text-transform:capitalize;font-size:175%;border:solid 2px red;}
+body ul.puzzle-board{background-color:#EFEFEF;overflow:hidden;opacity:0.8;margin:0 auto;}
+body ul.puzzle-board li.tile{background:url("../images/globe.jpg") no-repeat scroll 0 0 #EFEFEF;border:solid 2px #FFF;float:left;
+-webkit-transition-property: left, top;
+-webkit-transition: 1s ease-in;
+    -moz-transition: 1s ease-in;
+    -o-transition:1s ease-in;
+    -ms-transition:1s ease-in;
+-webkit-tap-highlight-color:#00FEFE;
+}
+
+body ul.puzzle-board li.tile.blank{background-image:none;z-index:-1;border:0;}

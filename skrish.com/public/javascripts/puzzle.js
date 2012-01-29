@@ -380,11 +380,24 @@ FB_PUZZLE.Game.prototype.init=function(){
 	this._board= new FB_PUZZLE.Board({"dimension":this.gameDimension,"image_dimension":this.gameImageDimension,"image":this.gameImage});
 };
 
-FB_PUZZLE.Game.prototype.renderBoard=function(){
-	
-};
-
 (function(){
+	var UTIL=FB_PUZZLE.UTIL,body=document.getElementsByTagName("body")[0];
+	UTIL.addListener(body,'touchmove', function(e) {
+		e.preventDefault();
+	}, false);
+
+	UTIL.addListener(window,'load', function(e) {
+		setTimeout(function() {setTimeout(scrollTo, 0, 0, 1);}, 10);
+	});
+
+	UTIL.addListener(window,'orientationchange', function(e) {
+		if(window.orientation==90 || window.orientation==-90){
+			e.preventDefault();
+		}
+	});
+
+	
+	
 	var CONSTANTS = FB_PUZZLE.CONSTANTS;
 	var game = new FB_PUZZLE.Game({"image":"/images/globe.jpg","dimension":CONSTANTS.BOARD_DIMENSION,"image_dimension":CONSTANTS.IMAGE_DIMENSION});
 	game.init();
