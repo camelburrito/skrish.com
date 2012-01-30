@@ -43,8 +43,6 @@ FB_PUZZLE.Board = function(config){
 	this.boardDimension= config.image_dimension;/*width and height of the board*/
 	this.image = config.image;
 	this._tiles=[];
-	//this._actual_tile_positions=[];/*index-> Board Positions ;value-> correct tile no*/
-	//this._current_tile_positions=[];/*index-> Board Positions ;value-> current tile no*/
 	this._DOMElement= this.generateDOMElement();
 	(function(board){
 		board.init();
@@ -67,9 +65,31 @@ FB_PUZZLE.Board.prototype.renderPuzzle=function(){
 	for(i=0;i<total_no_of_tiles;i++){
 		/*Add Event Listeners Here*/
 		(function(board,tile){
+			var offset = {"x":0,"y":0};
 			UTIL.addListener(tile._DOMElement,"click",function(){
 				board.moveTile(tile);
+			});		
+			UTIL.addListener(tile._DOMElement,"touchstart",function(e){		    
+		    offset = {
+		      x: e.changedTouches[0].pageX - parseInt(this.style.left,10),
+		      y: e.changedTouches[0].pageY - parseInt(this.style.top,10)
+		    };
 			});
+			UTIL.addListener(tile._DOMElement,"touchmove",function(e){
+				e.preventDefault();
+				var move=	board.getPossibleTileMove(tile);
+				if(!move){
+					return;
+				}	    
+		    if(move=="left" || move=="right"){
+					this.style.left=(e.changedTouches[0].pageX - offset.x)+"px";
+				}
+				if(move=="top" || move=="bottom"){
+					this.style.top=(e.changedTouches[0].pageY - offset.y)+"px";
+				}
+				
+			});		
+			
 		})(this,this._tiles[i]);
 		this._DOMElement.appendChild(this._tiles[i]._DOMElement);
 	}
@@ -390,11 +410,12 @@ FB_PUZZLE.Game.prototype.init=function(){
 		setTimeout(function() {setTimeout(scrollTo, 0, 0, 1);}, 10);
 	});
 
-	UTIL.addListener(window,'orientationchange', function(e) {
-		if(window.orientation==90 || window.orientation==-90){
-			e.preventDefault();
-		}
-	});
+	// UTIL.addListener(window,'orientationchange', function(e) {
+	// 	return false;
+	// 	if(window.orientation==90 || window.orientation==-90){
+	// 		e.preventDefault();
+	// 	}
+	// });
 
 	
 	
