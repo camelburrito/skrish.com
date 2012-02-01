@@ -4,7 +4,7 @@ if(!FB_PUZZLE){
 }
 
 FB_PUZZLE.CONSTANTS={
-	BOARD_DIMENSION:2,
+	BOARD_DIMENSION:3,
 	IMAGE_DIMENSION:540 /*in PIXELS*/
 };
 
@@ -442,7 +442,7 @@ FB_PUZZLE.Board.prototype.getPossibleTileMove=function(tile,travesal_direction){
 
 
 FB_PUZZLE.Board.prototype.init = function(){
-	var i=0,total_no_of_tiles,tile_dimension,_actual_tile_positions=[],_current_tile_positions=[];
+	var i=0,total_no_of_tiles,tile_dimension,_actual_tile_positions=[],_current_tile_positions=[],tmp_blank=false;
 	if(this.dimension>=2){
 		tile_dimension= Math.floor(this.boardDimension/this.dimension)-4;
 		total_no_of_tiles=this.dimension*this.dimension;
@@ -460,7 +460,12 @@ FB_PUZZLE.Board.prototype.init = function(){
 			this.randomizePositions(_current_tile_positions);
 		}		
 		for(i=0;i<total_no_of_tiles;i++){
-			this._tiles[i]= new FB_PUZZLE.Tile({"dimension":tile_dimension,"current_position":_current_tile_positions[i],"actual_position":_actual_tile_positions[i],"actual_tile_coordinates":this.decodeTileCoordinates(_actual_tile_positions[i]),"current_tile_coordinates":this.decodeTileCoordinates(_current_tile_positions[i]),"image":this.image});
+			if(_actual_tile_positions[i]==total_no_of_tiles-1){
+				tmp_blank=true;
+			}else{
+				tmp_blank=false;
+			}
+			this._tiles[i]= new FB_PUZZLE.Tile({"dimension":tile_dimension,"current_position":_current_tile_positions[i],"actual_position":_actual_tile_positions[i],"actual_tile_coordinates":this.decodeTileCoordinates(_actual_tile_positions[i]),"current_tile_coordinates":this.decodeTileCoordinates(_current_tile_positions[i]),"image":this.image,"isBlank":tmp_blank});
 		}
 		/*Always Render by current_tile_positions- so sort the tile array*/
 		this._tiles.sort(function(tile1,tile2){
@@ -487,7 +492,7 @@ FB_PUZZLE.Tile= function(config){
 	this.current_coordinates= (config.current_tile_coordinates)?config.current_tile_coordinates:{"row":0,"col":0};
 	this.dimension= config.dimension; /*actual width and height*/
 	this.image=config.image;
-	this.isBlank=(typeof(config.actual_position)=="number" && config.actual_position==0)?true:false;
+	this.isBlank=(config.isBlank)?true:false;
 	this._DOMPosition={};
 	this._DOMPosition.left=(this.current_coordinates["col"]*(this.dimension+4))+"px";
 	this._DOMPosition.top=(this.current_coordinates["row"]*(this.dimension+4))+"px";
