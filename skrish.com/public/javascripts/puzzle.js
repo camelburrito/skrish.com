@@ -4,7 +4,7 @@ if(!FB_PUZZLE){
 }
 
 FB_PUZZLE.CONSTANTS={
-	BOARD_DIMENSION:4,
+	BOARD_DIMENSION:2,
 	IMAGE_DIMENSION:540 /*in PIXELS*/
 };
 
@@ -44,6 +44,7 @@ FB_PUZZLE.Board = function(config){
 	this.image = config.image;
 	this._tiles=[];
 	this._DOMElement= this.generateDOMElement();
+	this.solved=false;
 	(function(board){
 		board.init();
 	})(this);
@@ -71,24 +72,141 @@ FB_PUZZLE.Board.prototype.renderPuzzle=function(){
 			});		
 			UTIL.addListener(tile._DOMElement,"touchstart",function(e){		    
 		    offset = {
-		      x: e.changedTouches[0].pageX - parseInt(this.style.left,10),
-		      y: e.changedTouches[0].pageY - parseInt(this.style.top,10)
+		      x: e.changedTouches[0].pageX,
+		      y: e.changedTouches[0].pageY,
+					dir: board.getPossibleTileMove(tile)
 		    };
 			});
 			UTIL.addListener(tile._DOMElement,"touchmove",function(e){
-				e.preventDefault();
-				var move=	board.getPossibleTileMove(tile);
-				if(!move){
+				var move= offset.dir,tmp_pos,i;
+				if(!move || e.touches.length>1 || this.solved){
 					return;
 				}	    
-		    if(move=="left" || move=="right"){
-					this.style.left=(e.changedTouches[0].pageX - offset.x)+"px";
-				}
-				if(move=="top" || move=="bottom"){
-					this.style.top=(e.changedTouches[0].pageY - offset.y)+"px";
+		    
+				if(move=="left" && offset.x > e.changedTouches[0].pageX){
+					tmp_pos=(parseInt(tile._DOMPosition.left,10)-(offset.x - e.changedTouches[0].pageX));
+					if(tmp_pos > parseInt(tile._DOMPosition.left,10)-tile.dimension){
+						tile._DOMElement.style.left= tmp_pos+"px";
+					}					
+				}else if(move=="right" && offset.x < e.changedTouches[0].pageX){
+					tmp_pos=(parseInt(tile._DOMPosition.left,10)+(e.changedTouches[0].pageX - offset.x));
+					if(tmp_pos < parseInt(tile._DOMPosition.left,10)+tile.dimension){
+						tile._DOMElement.style.left=tmp_pos+"px";
+					}
+				}else if(move=="top" && offset.y > e.changedTouches[0].pageY){
+					tmp_pos=(parseInt(tile._DOMPosition.top,10)-(offset.y - e.changedTouches[0].pageY));
+					if(tmp_pos > parseInt(tile._DOMPosition.top,10)-tile.dimension){
+						tile._DOMElement.style.top=tmp_pos+"px";
+					}	
+				}else if(move=="bottom" && offset.y < e.changedTouches[0].pageY){
+					tmp_pos=(parseInt(tile._DOMPosition.top,10)+(e.changedTouches[0].pageY - offset.y));
+					if(tmp_pos < parseInt(tile._DOMPosition.top,10)+tile.dimension){
+						tile._DOMElement.style.top=tmp_pos+"px";
+					}
+			  }else if(move=="rowleft" && offset.x > e.changedTouches[0].pageX){
+					tmp_pos=(parseInt(tile._DOMPosition.left,10)-(offset.x - e.changedTouches[0].pageX));
+					if(tmp_pos > parseInt(tile._DOMPosition.left,10)-tile.dimension){
+						for(i=tile.current_position;;i--){
+							if(board._tiles[i].isBlank){
+								break;
+							}
+							board._tiles[i]._DOMElement.style.left= (parseInt(board._tiles[i]._DOMPosition.left,10)-(offset.x - e.changedTouches[0].pageX))+"px";
+						}
+					}					
+				}else if(move=="rowright" && offset.x < e.changedTouches[0].pageX){
+					tmp_pos=(parseInt(tile._DOMPosition.left,10)+(e.changedTouches[0].pageX - offset.x));
+					if(tmp_pos > parseInt(tile._DOMPosition.left,10)-tile.dimension){
+						for(i=tile.current_position;;i++){
+							if(board._tiles[i].isBlank){
+								break;
+							}
+							board._tiles[i]._DOMElement.style.left= (parseInt(board._tiles[i]._DOMPosition.left,10)+(e.changedTouches[0].pageX - offset.x))+"px";
+						}
+					}					
+				}else if(move=="coltop" && offset.y > e.changedTouches[0].pageY){
+					tmp_pos=(parseInt(tile._DOMPosition.top,10)-(offset.y - e.changedTouches[0].pageY));
+					if(tmp_pos > parseInt(tile._DOMPosition.top,10)-tile.dimension){
+						for(i=tile.current_position;;i-=board.dimension){
+							if(board._tiles[i].isBlank){
+								break;
+							}
+							board._tiles[i]._DOMElement.style.top= (parseInt(board._tiles[i]._DOMPosition.top,10)-(offset.y - e.changedTouches[0].pageY))+"px";
+						}
+					}					
+				}else if(move=="colbottom" && offset.y < e.changedTouches[0].pageY){
+					tmp_pos=(parseInt(tile._DOMPosition.top,10)+(e.changedTouches[0].pageY - offset.y));
+					if(tmp_pos > parseInt(tile._DOMPosition.top,10)-tile.dimension){
+						for(i=tile.current_position;;i+=board.dimension){
+							if(board._tiles[i].isBlank){
+								break;
+							}
+							board._tiles[i]._DOMElement.style.top= (parseInt(board._tiles[i]._DOMPosition.top,10)+(e.changedTouches[0].pageY - offset.y))+"px";
+						}
+					}					
 				}
 				
-			});		
+			});
+			
+			UTIL.addListener(tile._DOMElement,"touchend",function(e){
+				var move= offset.dir,i;
+				if(!move || this.solved){
+					return;
+				}
+				if(move=="left" && parseInt(this.style.left,10) < (parseInt(tile._DOMPosition.left,10)-(tile.dimension/2))){
+					board.moveTile(tile);
+				}else if(move=="right" && parseInt(this.style.left,10) > (parseInt(tile._DOMPosition.left,10)+(tile.dimension/2))){
+					board.moveTile(tile);
+				}else if(move=="top" && parseInt(this.style.top,10) < (parseInt(tile._DOMPosition.top,10)-(tile.dimension/2))){
+					board.moveTile(tile);
+				}else if(move=="bottom" && parseInt(this.style.top,10) > (parseInt(tile._DOMPosition.top,10)+(tile.dimension/2))){
+					board.moveTile(tile);
+				}else if(move=="rowleft" && parseInt(this.style.left,10) < (parseInt(tile._DOMPosition.left,10)-(tile.dimension/2))){
+					board.moveTile(tile);
+				}else if(move=="rowright" && parseInt(this.style.left,10) > (parseInt(tile._DOMPosition.left,10)+(tile.dimension/2))){
+					board.moveTile(tile);
+				}else if(move=="coltop" && parseInt(this.style.top,10) < (parseInt(tile._DOMPosition.top,10)-(tile.dimension/2))){
+					board.moveTile(tile);
+				}else if(move=="colbottom" && parseInt(this.style.top,10) > (parseInt(tile._DOMPosition.top,10)+(tile.dimension/2))){
+					board.moveTile(tile);
+				}else if(move=="rowleft"){
+					for(i=tile.current_position;;i--){
+						if(board._tiles[i].isBlank){
+							break;
+						}
+						board._tiles[i]._DOMElement.style.left=board._tiles[i]._DOMPosition.left;
+						board._tiles[i]._DOMElement.style.top=board._tiles[i]._DOMPosition.top;
+					}
+				}else if(move=="rowright"){
+					for(i=tile.current_position;;i++){
+						if(board._tiles[i].isBlank){
+							break;
+						}
+						board._tiles[i]._DOMElement.style.left=board._tiles[i]._DOMPosition.left;
+						board._tiles[i]._DOMElement.style.top=board._tiles[i]._DOMPosition.top;
+					}
+				}else if(move=="coltop"){
+					for(i=tile.current_position;;i-=board.dimension){
+						if(board._tiles[i].isBlank){
+							break;
+						}
+						board._tiles[i]._DOMElement.style.left=board._tiles[i]._DOMPosition.left;
+						board._tiles[i]._DOMElement.style.top=board._tiles[i]._DOMPosition.top;
+					}
+				}
+				else if(move=="colbottom"){
+					for(i=tile.current_position;i>=0;i+=board.dimension){
+						if(board._tiles[i].isBlank){
+							break;
+						}
+						board._tiles[i]._DOMElement.style.left=board._tiles[i]._DOMPosition.left;
+						board._tiles[i]._DOMElement.style.top=board._tiles[i]._DOMPosition.top;
+					}
+				}else{
+					tile._DOMElement.style.left=tile._DOMPosition.left;
+					tile._DOMElement.style.top=tile._DOMPosition.top;
+				}
+			});
+					
 			
 		})(this,this._tiles[i]);
 		this._DOMElement.appendChild(this._tiles[i]._DOMElement);
@@ -120,7 +238,7 @@ FB_PUZZLE.Board.prototype.decodeTileCoordinates=function(position){
 
 FB_PUZZLE.Board.prototype.moveTile=function(tile){
 	var tmp_position=tile.current_position;
-	if(tile.isBlank){
+	if(tile.isBlank || this.solved){
 		return;
 	}
 	var move_direction= this.getPossibleTileMove(tile);
@@ -168,6 +286,17 @@ FB_PUZZLE.Board.prototype.moveTile=function(tile){
 				}
 			}			
 		}
+		
+		(function(board){
+			window.setTimeout(
+			function(){
+				if(board.isBoardSolved()){
+					board._DOMElement.className+=" solved";
+					board._DOMElement.style.backgroundImage="url('"+board.image+"')";
+					//alert("game ends");
+				}
+			},1000);
+		})(this);
 	}
 };
 
@@ -178,14 +307,15 @@ FB_PUZZLE.Board.prototype.swapTiles=function(tile1_pos,tile2_pos){
 	this._tiles[tile1_pos].current_position=tile2_pos;
 	this._tiles[tile2_pos].current_position=tile1_pos;
 	
-	// tmp=this._current_tile_positions[tile1_pos];
-	// this._current_tile_positions[tile1_pos]=this._current_tile_positions[tile2_pos];
-	// this._current_tile_positions[tile2_pos]=tmp;
-	
 	/*swap current_coordinates*/
 	tmp=this._tiles[tile1_pos].current_coordinates;
 	this._tiles[tile1_pos].current_coordinates=this._tiles[tile2_pos].current_coordinates;
 	this._tiles[tile2_pos].current_coordinates=tmp;
+	
+	/*Swap Tile DOM Positions*/
+	tmp=this._tiles[tile1_pos]._DOMPosition;
+	this._tiles[tile1_pos]._DOMPosition=this._tiles[tile2_pos]._DOMPosition;
+	this._tiles[tile2_pos]._DOMPosition=tmp;
 	
 	/*Swap Tile Objects*/
 	tmp=this._tiles[tile1_pos];
@@ -193,20 +323,11 @@ FB_PUZZLE.Board.prototype.swapTiles=function(tile1_pos,tile2_pos){
 	this._tiles[tile2_pos]=tmp;
 	
 	/*Physically move tiles by updating background positions*/
-	tmp=this._tiles[tile1_pos]._DOMElement.style.left;
-	this._tiles[tile1_pos]._DOMElement.style.left=this._tiles[tile2_pos]._DOMElement.style.left;
-	this._tiles[tile2_pos]._DOMElement.style.left=tmp;
-	
-	tmp=this._tiles[tile1_pos]._DOMElement.style.top;
-	this._tiles[tile1_pos]._DOMElement.style.top=this._tiles[tile2_pos]._DOMElement.style.top;
-	this._tiles[tile2_pos]._DOMElement.style.top=tmp;
+	this._tiles[tile1_pos]._DOMElement.style.left=this._tiles[tile1_pos]._DOMPosition.left;
+	this._tiles[tile1_pos]._DOMElement.style.top=this._tiles[tile1_pos]._DOMPosition.top;
+	this._tiles[tile2_pos]._DOMElement.style.left=this._tiles[tile2_pos]._DOMPosition.left;
+	this._tiles[tile2_pos]._DOMElement.style.top=this._tiles[tile2_pos]._DOMPosition.top;
 
-	if(this.isBoardSolved()){
-		alert("game ends");
-	}
-	
-	// console.log("Current Positions :"+this._current_tile_positions.toString());
-	// console.log("Actual Positions :"+this._actual_tile_positions.toString());
 };
 
 FB_PUZZLE.Board.prototype.isBoardSolved=function(){
@@ -216,7 +337,8 @@ FB_PUZZLE.Board.prototype.isBoardSolved=function(){
 			return false;
 		}
 	}
-	return true;
+	this.solved=true;
+	return this.solved;
 };
 
 
@@ -332,9 +454,11 @@ FB_PUZZLE.Board.prototype.init = function(){
 		/*Randomize Atual Positions -- Actuals Array should never be modified after this*/
 		this.randomizePositions(_actual_tile_positions);
 		
-		/*Generate Randomize Positions*/
+		/*Generate Randomize Positions and make sure they are different from actual positions*/
 		_current_tile_positions=_actual_tile_positions.slice(0);
-		this.randomizePositions(_current_tile_positions);
+		while(_current_tile_positions.toString()==_actual_tile_positions.toString()){
+			this.randomizePositions(_current_tile_positions);
+		}		
 		for(i=0;i<total_no_of_tiles;i++){
 			this._tiles[i]= new FB_PUZZLE.Tile({"dimension":tile_dimension,"current_position":_current_tile_positions[i],"actual_position":_actual_tile_positions[i],"actual_tile_coordinates":this.decodeTileCoordinates(_actual_tile_positions[i]),"current_tile_coordinates":this.decodeTileCoordinates(_current_tile_positions[i]),"image":this.image});
 		}
@@ -364,6 +488,9 @@ FB_PUZZLE.Tile= function(config){
 	this.dimension= config.dimension; /*actual width and height*/
 	this.image=config.image;
 	this.isBlank=(typeof(config.actual_position)=="number" && config.actual_position==0)?true:false;
+	this._DOMPosition={};
+	this._DOMPosition.left=(this.current_coordinates["col"]*(this.dimension+4))+"px";
+	this._DOMPosition.top=(this.current_coordinates["row"]*(this.dimension+4))+"px";
 	this._DOMElement=this.generateDOMElement();
 };
 
@@ -372,8 +499,8 @@ FB_PUZZLE.Tile.prototype.generateDOMElement = function(){
 	li=document.createElement("li");
 	li.className="tile";
 	li.style.position="absolute";
-	li.style.left=(this.current_coordinates["col"]*(this.dimension+4))+"px";
-	li.style.top=(this.current_coordinates["row"]*(this.dimension+4))+"px";
+	li.style.left=this._DOMPosition.left;
+	li.style.top=this._DOMPosition.top;
 	li.style.height=this.dimension+"px";
 	li.style.width=this.dimension+"px";
 	//li.innerHTML="Current-("+this.current_coordinates["row"]+","+this.current_coordinates["col"]+")--- Actual-("+this.actual_coordinates["row"]+","+this.actual_coordinates["col"]+")";
@@ -410,12 +537,14 @@ FB_PUZZLE.Game.prototype.init=function(){
 		setTimeout(function() {setTimeout(scrollTo, 0, 0, 1);}, 10);
 	});
 
-	// UTIL.addListener(window,'orientationchange', function(e) {
-	// 	return false;
-	// 	if(window.orientation==90 || window.orientation==-90){
-	// 		e.preventDefault();
-	// 	}
-	// });
+	UTIL.addListener(window,'orientationchange', function(e) {
+		if(window.orientation==90 || window.orientation==-90){
+			e.preventDefault();
+			document.getElementsByTagName("body")[0].className="horizontal";
+		}else{
+			document.getElementsByTagName("body")[0].className="";
+		}
+	});
 
 	
 	
