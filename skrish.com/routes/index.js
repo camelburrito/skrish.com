@@ -12,3 +12,6 @@ exports.puzzle = function(req, res){
 exports.test = function(req, res){
   res.render('json',{ title: 'Express' })
 };
+exports.vivi = function(req, res){
+  res.render('vivi',{ title: 'Happy Birthday Viviktha!' })
+};
